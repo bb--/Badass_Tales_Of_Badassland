@@ -31,8 +31,6 @@ int mapHeight = 0;							//0.
 int mapWidth = 0;							//0.
 
 
-
-
 //  _____        _          _                         
 // |  __ \      | |        | |                        
 // | |  | | __ _| |_ __ _  | |_ _   _ _ __   ___  ___ 
@@ -121,22 +119,21 @@ public:
 
 private:
 
-	sf::RenderWindow			mWindow;
-	int							mScreenWidth;					
-	int							mScreenHeight;
+	sf::RenderWindow				mWindow;
+	int								mScreenWidth;					
+	int								mScreenHeight;
 
-	float						mInvincibilityTime;
-	sf::Clock					mGameClock;
-	sf::Clock					mInvincibilityClock;
+	float							mInvincibilityTime;
+	sf::Clock						mGameClock;
+	sf::Clock						mInvincibilityClock;
+	sf::Clock						mSpawnClock;
 
-	char**						mLevelMap;
-	int							mPlayerStartingX;					
-	int							mPlayerStartingY;
+	std::vector<std::vector<int>>	mLevelMap;
 			
-	int							mTileSize;						
-	int							mGameSpeed;
-	float						mOffsetX;				//Map scrolling
-	float						mOffsetY;				//offset.
+	int								mTileSize;						
+	int								mGameSpeed;
+	float							mOffsetX;				//Map scrolling
+	float							mOffsetY;				//offset.
 
 
 };
@@ -148,26 +145,27 @@ private:
 class World {
 public:
 
-								World();
-								World(int, int);
-	void						resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize);
-	void						loadLevelMap(std::string);
+									World();
+									World(int, int);
+	void							resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize);
+	void							loadLevelMap(std::string);
+	void							deleteLevelMap();
 
-	std::vector<Enemy>&			getEnemies();
-	std::vector<DropItem>&		getDrops();
+	std::vector<Enemy>&				getEnemies();
+	std::vector<DropItem>&			getDrops();
 
-	char**						getLevelMap();
-	int							getMapHeight();
-	int							getMapWidth();
+	std::vector<std::vector<int>>	getLevelMap();
+	int								getMapHeight();
+	int								getMapWidth();
 
 private:
 
-	char**						mLevelMap;
-	int							mMapHeight;
-	int							mMapWidth;
+	std::vector<std::vector<int>>	mLevelMap;
+	int								mMapHeight;
+	int								mMapWidth;
 
-	std::vector<Enemy>			mEnemies;
-	std::vector<DropItem>		mDrops;
+	std::vector<Enemy>				mEnemies;
+	std::vector<DropItem>			mDrops;
 
 };
 
@@ -205,29 +203,32 @@ void World::resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int dir
 
 void World::loadLevelMap(std::string filename) {
 
-	//Clearing memory.
-	//for(int i = 0; i < mMapHeight; ++i)
-	//	delete[] mLevelMap[i];
-	//delete[] mLevelMap;
-
 	std::ifstream inputFile(filename);
 
 	inputFile >> mMapHeight >> mMapWidth;
 
-	//Allocating memory.
-	mLevelMap = new char*[mMapHeight];
+	//Resizing the array.
+	mLevelMap.resize(mMapHeight);
 	for(int i = 0; i < mMapHeight; ++i)
-		mLevelMap[i] = new char[mMapWidth];
+		mLevelMap[i].resize(mMapWidth);
 
 	inputFile.get();
 	for(int i = 0; i < mMapHeight; ++i) {
-		for(int j = 0; j < mMapWidth; ++j)
-			inputFile.get(mLevelMap[i][j]);
+		for(int j = 0; j < mMapWidth; ++j) {
+			char temp = inputFile.get();
+			mLevelMap[i][j] = int(temp);
+		}
 		inputFile.get();
 	}
 
 	inputFile.close();
 
+}
+
+void World::deleteLevelMap() {
+	mLevelMap.clear();
+	mEnemies.clear();
+	mDrops.clear();
 }
 
 std::vector<Enemy>& World::getEnemies() {
@@ -238,7 +239,7 @@ std::vector<DropItem>& World::getDrops() {
 	return mDrops;
 }
 
-char** World::getLevelMap() {
+std::vector<std::vector<int>> World::getLevelMap() {
 	return mLevelMap;
 }
 
@@ -254,23 +255,25 @@ int World::getMapWidth() {
 class Player {
 public:
 
-	sf::Vector2f			mMovement;
-	float					mSpeed;
+	sf::Vector2f					mMovement;
+	float							mSpeed;
 
-	sf::FloatRect			mRect;
-	sf::Sprite				mSprite;
-	sf::Sprite				mHpSprite;
-	sf::String				mName;
-	sf::Text				mTextName;
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	sf::Sprite						mHpSprite;
+	sf::String						mName;
+	sf::Text						mTextName;
 
-	float					mCurrentFrame;
-	float					mAnimationSpeed;
-	static const int		mFrameCount = 10;
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
 
-	bool					mIsAlive;
-	float					mHP;
-	float					mMaxHp;
-	int						mMP;
+	bool							mIsAlive;
+	float							mHP;
+	float							mMaxHp;
+	int								mMP;
+
+	std::vector<int>				mMessages;
 
 	//Player constructor.
 	Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Font& font) {
@@ -304,7 +307,7 @@ public:
 	}
 
 	//Player update.
-	void update(float deltaTime, char** levelMap, struct config* config, World& world) {
+	void update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
 
 		//Player controls (testing).
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))	mMovement.y -= mSpeed;
@@ -312,13 +315,11 @@ public:
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))	mMovement.x -= mSpeed;
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))	mMovement.x += mSpeed;
 
+		//Movement and resolving colisions (via the World class).
 		mRect.left += mMovement.x * deltaTime;
 		world.resolveCollision(mRect, mMovement, 0, config->tileSize);
-		//collision(0, levelMap, config);
-
 		mRect.top += mMovement.y * deltaTime;
 		world.resolveCollision(mRect, mMovement, 1, config->tileSize);
-		//collision(1, levelMap, config);
 
 		//Player animation.
 		mCurrentFrame += mAnimationSpeed * deltaTime;
@@ -352,27 +353,10 @@ public:
 		mMovement.y = 0;
 
 	}
-	/*
-	//direction = 0: horizontal.
-	//direction = 1: vertical.
-	void collision(int direction, char** levelMap, struct config* config) {
-		for(int i = mRect.top / config->tileSize; i < (mRect.top + mRect.height) / config->tileSize; ++i)
-			for(int j = mRect.left / config->tileSize; j < (mRect.left + mRect.width) / config->tileSize; ++j) {
 
-				if(levelMap[i][j] == 'B') {
-					if((mMovement.x > 0) && (direction == 0)) mRect.left = j * config->tileSize - mRect.width;
-					if((mMovement.x < 0) && (direction == 0)) mRect.left = j * config->tileSize + config->tileSize;
-					if((mMovement.y > 0) && (direction == 1)) mRect.top = i * config->tileSize - mRect.height;
-					if((mMovement.y < 0) && (direction == 1)) mRect.top = i * config->tileSize + config->tileSize;
-				}
-				if(levelMap[i][j] == '0') {
-					levelMap[i][j] = ' ';
-					mMP += 10;
-				}
-
-			}
+	void getMessage(int message) {
+		mMessages.push_back(message);
 	}
-	*/
 
 	//Taking damage.
 	void takeDamage(float damage) {
@@ -403,26 +387,28 @@ public:
 //AI is to be represented as a set of private methods.
 class Enemy {
 public:
-	sf::Vector2f			mMovement;
-	int						mDirection;
-	float					mSpeed;
+	sf::Vector2f					mMovement;
+	int								mDirection;
+	float							mSpeed;
 
-	sf::FloatRect			mRect;
-	sf::Sprite				mSprite;
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
 
-	float					mCurrentFrame;
-	float					mAnimationSpeed;
-	static const int		mFrameCount = 10;
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
 
-	bool					mIsAlive;
-	int						mHP;
+	bool							mIsAlive;
+	int								mHP;
 
-	sf::Clock				mDamageClock;
-	sf::Clock				mMovementClock;
-	float					mDamage;
+	sf::Clock						mDamageClock;
+	sf::Clock						mMovementClock;
+	float							mDamage;
 
-	sf::String				mName;
-	sf::Text				mTextName;
+	sf::String						mName;
+	sf::Text						mTextName;
+
+	std::vector<int>				mMessages;
 
 	//Enemy constructor.
 	Enemy(sf::Texture& texture, int x, int y, sf::Font& font) {
@@ -451,7 +437,7 @@ public:
 	}
 
 	//Enemy update.
-	void update(float deltaTime, char** levelMap, struct config* config, World& world) {
+	void update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
 
 		if(mMovementClock.getElapsedTime().asSeconds() > 5) {
 			mDirection = rand() % 4;
@@ -465,10 +451,10 @@ public:
 
 		mRect.left += mMovement.x * deltaTime;
 		collision(levelMap, config);
-		//world.resolveCollision(mRect, mMovement, ~(mDirection | 1), config->tileSize);
+		//world.resolveCollision(mRect, mMovement, 0, config->tileSize);
 		mRect.top += mMovement.y * deltaTime;
 		collision(levelMap, config);
-		//world.resolveCollision(mRect, mMovement, mDirection | 1, config->tileSize);
+		//world.resolveCollision(mRect, mMovement, 1, config->tileSize);
 
 		//Enemy animation.
 		mCurrentFrame += mAnimationSpeed * deltaTime;
@@ -484,7 +470,7 @@ public:
 
 	}
 	
-	void collision(char** levelMap, struct config* config) {
+	void collision(std::vector<std::vector<int>> levelMap, struct config* config) {
 		for(int i = mRect.top / config->tileSize; i < (mRect.top + mRect.height) / config->tileSize; ++i)
 			for(int j = mRect.left / config->tileSize; j < (mRect.left + mRect.width) / config->tileSize; ++j) {
 				
@@ -512,6 +498,11 @@ public:
 	void detectTargets(World& world) {
 		
 	}
+	
+	//Inner communication between objects (between the components in the future).
+	void getMessage(int message) {
+		mMessages.push_back(message);
+	}
 
 	sf::FloatRect getRect() {
 		return mRect;
@@ -537,11 +528,11 @@ public:
 
 class DropItem {
 public:
-	sf::FloatRect			mRect;
-	sf::Sprite				mSprite;
-	float					mCurrentFrame;
-	int						mEffectValue;
-	bool					mIsMarkedForRemoval;
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	float							mCurrentFrame;
+	int								mEffectValue;
+	bool							mIsMarkedForRemoval;
 
 	//Drop item constructor.
 	DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
@@ -608,50 +599,6 @@ public:
 //               |___
 //
 
-//Loads level map from a text file (who would've thought?).
-//Note: char** sucks. Totally.
-char** loadLevelMap(std::string filename) {
-
-	std::ifstream inputFile(filename);
-	int mapHeightLocal;
-	int mapWidthLocal;
-	char trash;												//For '\n'.
-	inputFile >> mapHeightLocal >> mapWidthLocal;
-	mapHeight = mapHeightLocal;
-	mapWidth = mapWidthLocal;
-
-	char** levelMap = new char* [mapHeightLocal];			//!!!Handle memory[1]-.
-	for(int i = 0; i < mapHeightLocal; ++i)
-		levelMap[i] = new char[mapWidthLocal];				//!!!Handle memory[1]-.
-	
-	inputFile.get(trash);
-	for(int i = 0; i < mapHeightLocal; ++i) {
-		for(int j = 0; j < mapWidthLocal; ++j)
-			inputFile.get(levelMap[i][j]);
-		inputFile.get(trash);
-	}
-	inputFile.close();
-
-	return levelMap;
-
-}
-
-//Loads a level and sets starting coordinates for the player (work in progress, though).
-//filename - name of the level file to be loaded.
-//**levelMap - pointer to the existing level map.
-char** loadLevel(std::string filename, char** levelMap, struct config* config, int x, int y) {
-
-	//Clearing memory.
-	for(int i = 0; i < mapHeight; ++i)
-		delete[] levelMap[i];					//!!!Memory handled[1]+.
-	delete[] levelMap;							//!!!Memory handled[1]+.
-
-	config->playerStartingX = x;
-	config->playerStartingY = y;
-
-	return loadLevelMap(filename);
-
-}
 
 //Loads a config file.
 void loadConfigFile(std::string filename, struct config* config) {
@@ -698,8 +645,7 @@ int main() {
 	world.loadLevelMap(levelMapName);
 
 	//Loading level map.
-	//char** levelMap = loadLevelMap(levelMapName);
-	char** levelMap = world.getLevelMap();
+	std::vector<std::vector<int>> levelMap = world.getLevelMap();
 	
 
 	//Clocks.
@@ -736,7 +682,6 @@ int main() {
 	//Enemy sound.
 	sf::SoundBuffer emenyHitSoundBuffer;
 	emenyHitSoundBuffer.loadFromFile("sound1.ogg");
-	//emenyHitSoundBuffer.loadFromFile("Sounds/NPC/ogre/ogre2.wav");
 	sf::Sound emenyHitSound(emenyHitSoundBuffer);
 
 	//Loading and setting level tileset.
@@ -774,13 +719,14 @@ int main() {
 		std::cin.get();
 		return EXIT_FAILURE;
 	}
-	//DropItem healthPotion(healthPotionTexture, "healthItem", 40, 600, 150);
 
 
 	//Object arrays.
-	std::vector<Enemy> enemies;
-	std::vector<DropItem> drops;
-	enemies.push_back(*(new Enemy(enemyTexture, 400, 360, font)));
+	//std::vector<Enemy> enemies;
+	std::vector<DropItem> drops = world.getDrops();
+	std::vector<Enemy> enemies = world.getEnemies();
+	//enemies.push_back(*(new Enemy(enemyTexture, 400, 360, font)));
+
 
 	//Creating a window.
 	sf::RenderWindow mWindow(sf::VideoMode(config.screenWidth, config.screenHeight), "Badass Tales of BADASSLAND!!!!111");
@@ -864,10 +810,8 @@ int main() {
 
 		//Rendering all the objects.
 		for(int i = 0; i < enemies.size(); ++i) {
-
 			mWindow.draw(enemies[i].getSprite());
 			mWindow.draw(enemies[i].getTextName());
-
 		}
 
 		for(int i = 0; i < drops.size(); ++i)
@@ -889,11 +833,6 @@ int main() {
 			}
 
 	}
-
-	//Clearing memory.
-	for(int i = 0; i < mapHeight; ++i)
-		delete[] levelMap[i];					//!!!Memory handled[1]+.
-	delete[] levelMap;							//!!!Memory handled[1]+.
 
 	return 0;
 
