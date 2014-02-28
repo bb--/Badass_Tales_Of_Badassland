@@ -1,6 +1,7 @@
 //SFML includes.
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+
 //std includes.
 #include <fstream>
 #include <iostream>
@@ -94,6 +95,7 @@ struct config {
 //PROTOTYPES.
 class World;
 
+
 //Player.hpp
 class Player {
 public:
@@ -135,8 +137,9 @@ private:
 
 	bool							mIsAlive;
 	float							mHP;
-	float							mMaxHp;
-	int								mMP;
+	float							mMaxHP;
+	float							mMP;
+	float							mMaxMP;
 
 	std::vector<int>				mMessages;	
 	
@@ -190,7 +193,7 @@ private:
 class DropItem {
 public:
 
-									DropItem(sf::Texture&, std::string, int, int, int);
+									DropItem(sf::Texture&, int, int, int);
 	void							update(float);
 	void							action(Player&);
 
@@ -216,7 +219,7 @@ public:
 
 									World();
 									World(int, int);
-	void							resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize);
+	void							resolveCollision(sf::FloatRect&, sf::Vector2f, int, int);
 	void							loadLevelMap(std::string);
 	void							deleteLevelMap();
 
@@ -488,9 +491,11 @@ Player::Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Fon
 	mAnimationSpeed = 0.005;
 
 	mIsAlive = true;
-	mHP = 100;
-	mMaxHp = 100;
+	mHP = 150;
+	mMaxHP = 150;
 	mMP = 100;
+	mMaxMP = 100;
+
 }
 
 void Player::update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
@@ -520,17 +525,18 @@ void Player::update(float deltaTime, std::vector<std::vector<int>> levelMap, str
 
 	mSprite.setPosition(mRect.left, mRect.top);
 
-	//HP.
-	if(mHP / mMaxHp >= 0.6)
+	//HP bar.
+	float hpPercentage = mHP / mMaxHP;
+	if(hpPercentage >= 0.6)
 		mHpSprite.setColor(sf::Color::Green);
-	else if((mHP / mMaxHp >= 0.35) && (mHP / mMaxHp < 0.6))
+	else if((hpPercentage >= 0.35) && (hpPercentage < 0.6))
 		mHpSprite.setColor(sf::Color::Yellow);
-	else if(mHP / mMaxHp < 0.35)
+	else if(hpPercentage < 0.35)
 		mHpSprite.setColor(sf::Color::Red);
 
-	mHpSprite.setTextureRect(sf::IntRect(100 * (1 - mHP / mMaxHp), 0, 100, 10));
+	mHpSprite.setTextureRect(sf::IntRect(100 * (1 - hpPercentage), 0, 100, 10));
 	mHpSprite.setPosition(mRect.left, mRect.top + mRect.height);
-	mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());						//-
+	mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());
 
 	//Stopping the player.
 	mMovement.x = 0;
@@ -547,7 +553,10 @@ void Player::takeDamage(float damage) {
 }
 
 void Player::heal(float hp) {
-	mHP += hp;
+	if(mHP + hp > mMaxHP)
+		mHP = mMaxHP;
+	else
+		mHP += hp;
 }
 
 sf::FloatRect Player::getRect() {
@@ -709,7 +718,7 @@ bool Enemy::isReadyToAttack() {
 //
 //DropItem.cpp
 //
-DropItem::DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
+DropItem::DropItem(sf::Texture& texture, int effect, int x, int y) {
 	mSprite.setTexture(texture);
 	mRect = sf::FloatRect(x, y, 32, 32);
 	mSprite.setTextureRect(sf::IntRect(0, 0, 32, 32));
@@ -848,17 +857,15 @@ int main() {
 	//HUD Enemy count.
 	sf::Text textEnemyCount("", font, 30);
 	textEnemyCount.setStyle(sf::Text::Bold);
-	textEnemyCount.setColor(sf::Color::Green);
+	textEnemyCount.setColor(sf::Color::Color(184, 138, 0));
 	textEnemyCount.setPosition(10, 80);
 
-	//Sounds.
-	sf::SoundBuffer emenyHitSoundBuffer;
+	//HUD Player coordinates.
+	sf::Text textPlayerCoordinates("", font, 30);
+	textPlayerCoordinates.setStyle(sf::Text::Bold);
+	textPlayerCoordinates.setColor(sf::Color::Color(125, 145, 176));
+	textPlayerCoordinates.setPosition(10, 115);
 
-	emenyHitSoundBuffer.loadFromFile("sound1.ogg");
-
-	sf::Sound emenyHitSound(emenyHitSoundBuffer);
-
-	
 	//Loading textures.
 	sf::Texture hpBar;
 	sf::Texture tileSet;
@@ -873,6 +880,14 @@ int main() {
 	if(!healthPotionTexture.loadFromFile("./textures/healthPotion.png"))	return 1;
 
 	sf::Sprite tile(tileSet);
+
+	//Sounds.
+	sf::SoundBuffer emenyHitSoundBuffer;
+
+	emenyHitSoundBuffer.loadFromFile("sound1.ogg");
+
+	sf::Sound emenyHitSound(emenyHitSoundBuffer);
+
 
 
 	//Game objects.
@@ -912,11 +927,8 @@ int main() {
 
 		//Resolving collisions. Should move to World class methods.
 		for(int i = 0; i < enemies.size(); ++i)
-			//if((player.getRect().intersects(enemies[i].getRect())) && (invincibilityClock.getElapsedTime().asSeconds() > config.invincibilityTime)) {
-			if((player.getRect().intersects(enemies[i].getRect())) && (enemies[i].isReadyToAttack())) {
+			if((player.getRect().intersects(enemies[i].getRect())) && (enemies[i].isReadyToAttack()))
 				enemies[i].dealDamage(player);
-				//invincibilityClock.restart();
-			}
 
 		for(int i = 0; i < drops.size(); ++i)
 			if((player.getRect().intersects(drops[i].getRect())) && (~drops[i].isMarkedForRemoval()))
@@ -930,7 +942,7 @@ int main() {
 
 		//Spawning health potions.
 		if((sf::Keyboard::isKeyPressed(sf::Keyboard::H)) && (spawnClock.getElapsedTime().asSeconds() > 0.25)) {
-			drops.push_back(*(new DropItem(healthPotionTexture, "healthItem", 40, rand() % 400 + 120, rand() % 600 + 120)));
+			drops.push_back(*(new DropItem(healthPotionTexture, 40, rand() % 400 + 120, rand() % 600 + 120)));
 			spawnClock.restart();
 		}
 
@@ -939,27 +951,35 @@ int main() {
 		std::ostringstream hudHealth;
 		std::ostringstream hudMana;
 		std::ostringstream hudEnemyCount;
+		std::ostringstream hudPlayerCoordinates;
 
 		hudHealth << player.getHP();
 		hudMana << player.getMP();
 		hudEnemyCount << enemies.size();
+		hudPlayerCoordinates << "X: " << player.getRect().left + config.tileSize / 2 << '\n' << "Y: " << player.getRect().top + config.tileSize / 2;
 
 		textMana.setString(hudMana.str());
 		textHealth.setString(hudHealth.str());
 		textEnemyCount.setString(hudEnemyCount.str());
+		textPlayerCoordinates.setString(hudPlayerCoordinates.str());
 
 
 		//View.
 		mViewPosition.x = player.getRect().left + config.tileSize / 2 - config.screenWidth / 2;
 		mViewPosition.y = player.getRect().top + config.tileSize / 2 - config.screenHeight / 2;
-		if(mViewPosition.x < 0)	mViewPosition.x = 0;
-		if(mViewPosition.y < 0)	mViewPosition.y = 0;
+		
+		if(mViewPosition.x < 0)																	mViewPosition.x = 0;
+		if(mViewPosition.x > world.getMapWidth() * config.tileSize - config.screenWidth)		mViewPosition.x = world.getMapWidth() * config.tileSize - config.screenWidth;
+		if(mViewPosition.y < 0)																	mViewPosition.y = 0;
+		if(mViewPosition.y > world.getMapHeight() * config.tileSize - config.screenHeight)		mViewPosition.y = world.getMapHeight() * config.tileSize - config.screenHeight;
+
 		mView.reset(sf::FloatRect(mViewPosition.x, mViewPosition.y, config.screenWidth, config.screenHeight));
 		mWindow.setView(mView);
 
 		textHealth.setPosition(mViewPosition.x, mViewPosition.y);
 		textMana.setPosition(mViewPosition.x, mViewPosition.y + 35);
 		textEnemyCount.setPosition(mViewPosition.x, mViewPosition.y + 70);
+		textPlayerCoordinates.setPosition(mViewPosition.x, mViewPosition.y + 105);
 
 		//Clearing the screen.
 		mWindow.clear(sf::Color::White);
@@ -999,6 +1019,7 @@ int main() {
 		mWindow.draw(textHealth);
 		mWindow.draw(textMana);
 		mWindow.draw(textEnemyCount);
+		mWindow.draw(textPlayerCoordinates);
 		mWindow.display();
 
 		//Deleting objects marked for removal.
