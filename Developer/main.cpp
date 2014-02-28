@@ -25,10 +25,12 @@ int screenHeight = 0;						//720.
 int gameSpeed = 0;							//200.
 */
 //Should be moved to config.
-float offsetX = 0;				//Map scrolling
-float offsetY = 0;				//offset.
-int mapHeight = 0;							//0.
-int mapWidth = 0;							//0.
+float	offsetX = 0;				//Map scrolling
+float	offsetY = 0;				//offset.
+int		mapHeight = 0;						//0.
+int		mapWidth = 0;						//0.
+
+
 
 
 //  _____        _          _                         
@@ -44,54 +46,92 @@ int mapWidth = 0;							//0.
 //Attributes.
 struct attributes {
 
-     int					strength;				//Carry weight, melee damage. 
-     int					endurance;				//HP, resistances.
-     int					agility;				//Speed, ranged damage.
-     int					intelligence;			//MP, magic damage.
-     int					luck;					//Dodge chance, critical damage chance.
+     int							strength;				//Carry weight, melee damage. 
+     int							endurance;				//HP, resistances.
+     int							agility;				//Speed, ranged damage.
+     int							intelligence;			//MP, magic damage.
+     int							luck;					//Dodge chance, critical damage chance.
 
 };
 
 //Resistances.
 struct resistances {
 
-     int					poison;
-     int					paralize;
-     int					lightning;
-     int					fire;
-     int					ice;
-     int					earth;
+     int							poison;
+     int							paralize;
+     int							lightning;
+     int							fire;
+     int							ice;
+     int							earth;
 
 };
 
 //Health bar.
 struct healthBar {
 
-	sf::Sprite				mSprite;
-	int						mWidth;
-	int						mHeight;
+	sf::Sprite						mSprite;
+	int								mWidth;
+	int								mHeight;
 
 };
 
 //Structure used for storing config values (your C.O.).
 struct config {
 
-	float					invincibilityTime;		
-	int						playerStartingX;					
-	int						playerStartingY;			
-	int						mapHeight;				
-	int						mapWidth;				
-	int						tileSize;						
-	int						screenWidth;					
-	int						screenHeight;
-	int						gameSpeed;
-	float					offsetX;				//Map scrolling
-	float					offsetY;				//offset.
-	std::string				levelMapName;
+	float							invincibilityTime;		
+	int								playerStartingX;					
+	int								playerStartingY;			
+	int								mapHeight;				
+	int								mapWidth;				
+	int								tileSize;						
+	int								screenWidth;					
+	int								screenHeight;
+	int								gameSpeed;
+	float							offsetX;				//Map scrolling
+	float							offsetY;				//offset.
+	std::string						levelMapName;
 
 };
 
 
+//PROTOTYPES.
+class Player;
+class Enemy;
+class DropItem;
+
+//   _____                                             _       
+//  / ____|                                           | |      
+// | |     ___  _ __ ___  _ __   ___  _ __   ___ _ __ | |_ ___ 
+// | |    / _ \| '_ ` _ \| '_ \ / _ \| '_ \ / _ \ '_ \| __/ __|
+// | |___| (_) | | | | | | |_) | (_) | | | |  __/ | | | |_\__ \
+//  \_____\___/|_| |_| |_| .__/ \___/|_| |_|\___|_| |_|\__|___/
+//                       | |                                   
+//                       |_|
+//
+
+
+/*
+class InputComponent {
+public:
+
+	void update(Player& player) {
+
+		sf::Vector2f movement = player.getMovement();
+
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))	movement.y -= player.getSpeed();
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))	movement.y += player.getSpeed();
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))	movement.x -= player.getSpeed();
+		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))	movement.x += player.getSpeed();
+
+		player.setMovement(movement);
+
+	}
+
+private:
+	
+
+};
+*/
 
 
 //   _____ _                         
@@ -102,41 +142,6 @@ struct config {
 //  \_____|_|\__,_|___/___/\___||___/
 //
 
-class Player;
-class Enemy;
-class DropItem;
-
-
-//Game.hpp
-class Game {
-public:
-
-								Game();
-	void						run();
-	void						update();
-	void						processEvents();
-	void						render();
-
-private:
-
-	sf::RenderWindow				mWindow;
-	int								mScreenWidth;					
-	int								mScreenHeight;
-
-	float							mInvincibilityTime;
-	sf::Clock						mGameClock;
-	sf::Clock						mInvincibilityClock;
-	sf::Clock						mSpawnClock;
-
-	std::vector<std::vector<int>>	mLevelMap;
-			
-	int								mTileSize;						
-	int								mGameSpeed;
-	float							mOffsetX;				//Map scrolling
-	float							mOffsetY;				//offset.
-
-
-};
 
 //Use for Enemy / Player / DropItem shared methods.
 //template<class T>;
@@ -164,6 +169,7 @@ private:
 	int								mMapHeight;
 	int								mMapWidth;
 
+	//Player							mPlayer;
 	std::vector<Enemy>				mEnemies;
 	std::vector<DropItem>			mDrops;
 
@@ -251,29 +257,49 @@ int World::getMapWidth() {
 	return mMapWidth;
 }
 
+
+
+//Game.hpp
+class Game {
+public:
+
+									Game();
+	void							run();
+	void							update();
+	void							processEvents();
+	void							render();
+
+private:
+
+	sf::RenderWindow				mWindow;
+	int								mScreenWidth;					
+	int								mScreenHeight;
+
+	float							mInvincibilityTime;
+	sf::Clock						mGameClock;
+	sf::Clock						mInvincibilityClock;
+	sf::Clock						mSpawnClock;
+
+	std::vector<std::vector<int>>	mLevelMap;
+			
+	int								mTileSize;						
+	int								mGameSpeed;
+	float							mOffsetX;				//Map scrolling
+	float							mOffsetY;				//offset.
+
+	World							mWorld;
+
+
+};
+
+
+
+
+
+
 //Player.
 class Player {
 public:
-
-	sf::Vector2f					mMovement;
-	float							mSpeed;
-
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-	sf::Sprite						mHpSprite;
-	sf::String						mName;
-	sf::Text						mTextName;
-
-	float							mCurrentFrame;
-	float							mAnimationSpeed;
-	static const int				mFrameCount = 10;
-
-	bool							mIsAlive;
-	float							mHP;
-	float							mMaxHp;
-	int								mMP;
-
-	std::vector<int>				mMessages;
 
 	//Player constructor.
 	Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Font& font) {
@@ -314,6 +340,8 @@ public:
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))	mMovement.y += mSpeed;
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))	mMovement.x -= mSpeed;
 		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))	mMovement.x += mSpeed;
+		//mInput.update(*this);
+
 
 		//Movement and resolving colisions (via the World class).
 		mRect.left += mMovement.x * deltaTime;
@@ -376,9 +404,63 @@ public:
 
 	}
 
+	//Getters.
 	sf::FloatRect getRect() {
 		return mRect;
 	}
+
+	sf::Sprite getSprite() {
+		return mSprite;
+	}
+
+	sf::Sprite getHpSprite() {
+		return mHpSprite;
+	}
+
+	sf::Text getTextName() {
+		return mTextName;
+	}
+
+	float getSpeed() {
+		return mSpeed;
+	}
+
+	sf::Vector2f getMovement() {
+		return mMovement;
+	}
+
+	//Setters.
+	void setSpeed(float speed) {
+		mSpeed = speed;
+	}
+
+	void setMovement(sf::Vector2f movement) {
+		mMovement = movement;
+	}
+
+private:
+
+	//InputComponent					mInput;
+
+	sf::Vector2f					mMovement;
+	float							mSpeed;
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	sf::Sprite						mHpSprite;
+	sf::String						mName;
+	sf::Text						mTextName;
+
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
+
+	bool							mIsAlive;
+	float							mHP;
+	float							mMaxHp;
+	int								mMP;
+
+	std::vector<int>				mMessages;
 
 };
 
@@ -387,28 +469,7 @@ public:
 //AI is to be represented as a set of private methods.
 class Enemy {
 public:
-	sf::Vector2f					mMovement;
-	int								mDirection;
-	float							mSpeed;
 
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-
-	float							mCurrentFrame;
-	float							mAnimationSpeed;
-	static const int				mFrameCount = 10;
-
-	bool							mIsAlive;
-	int								mHP;
-
-	sf::Clock						mDamageClock;
-	sf::Clock						mMovementClock;
-	float							mDamage;
-
-	sf::String						mName;
-	sf::Text						mTextName;
-
-	std::vector<int>				mMessages;
 
 	//Enemy constructor.
 	Enemy(sf::Texture& texture, int x, int y, sf::Font& font) {
@@ -522,17 +583,38 @@ public:
 		else
 			return false;
 	}
+
+private:
+
+	sf::Vector2f					mMovement;
+	int								mDirection;
+	float							mSpeed;
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
+
+	bool							mIsAlive;
+	int								mHP;
+
+	sf::Clock						mDamageClock;
+	sf::Clock						mMovementClock;
+	float							mDamage;
+
+	sf::String						mName;
+	sf::Text						mTextName;
+
+	std::vector<int>				mMessages;
+
 	
 };
 
-
 class DropItem {
 public:
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-	float							mCurrentFrame;
-	int								mEffectValue;
-	bool							mIsMarkedForRemoval;
+
 
 	//Drop item constructor.
 	DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
@@ -565,6 +647,14 @@ public:
 	bool isMarkedForRemoval() {
 		return mIsMarkedForRemoval;
 	}
+
+private:
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	float							mCurrentFrame;
+	int								mEffectValue;
+	bool							mIsMarkedForRemoval;
 
 };
 
@@ -817,9 +907,9 @@ int main() {
 		for(int i = 0; i < drops.size(); ++i)
 			mWindow.draw(drops[i].getSprite());
 
-		mWindow.draw(player.mSprite);
-		mWindow.draw(player.mHpSprite);
-		mWindow.draw(player.mTextName);
+		mWindow.draw(player.getSprite());
+		mWindow.draw(player.getHpSprite());
+		mWindow.draw(player.getTextName());
 
 		mWindow.draw(textHealth);
 		mWindow.draw(textMana);
