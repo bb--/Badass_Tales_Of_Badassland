@@ -10,6 +10,15 @@
 #include <sstream>
 #include <vector>
 
+//Class includes.
+//#include <World.hpp>
+//#include <Player.hpp>
+//#include <Enemy.hpp>
+//#include <DropItem.hpp>
+//#include <DataTypes.hpp>
+//#include <InputComponent.hpp>
+
+
 
 //FONT - BIG.
 //http://patorjk.com/software/taag/
@@ -78,6 +87,7 @@ struct config {
 
 //PROTOTYPES.
 class World;
+
 class Player {
 public:
 
@@ -86,7 +96,6 @@ public:
 	void							getMessage(int);
 	void							takeDamage(float);
 	void							heal(float);
-	void							showStats(std::ostringstream*, std::ostringstream*);
 
 	sf::FloatRect					getRect();
 	sf::Sprite						getSprite();
@@ -94,6 +103,8 @@ public:
 	sf::Text						getTextName();
 	float							getSpeed();
 	sf::Vector2f					getMovement();
+	float							getHP();
+	float							getMP();
 
 	void							setSpeed(float);
 	void							setMovement(sf::Vector2f);
@@ -123,6 +134,7 @@ private:
 	std::vector<int>				mMessages;	
 	
 };
+
 
 //Work in progress (stupid AI).
 //AI is to be represented as a set of private methods.
@@ -169,6 +181,7 @@ private:
 
 };
 
+
 class DropItem {
 public:
 
@@ -192,6 +205,7 @@ private:
 
 };
 
+
 //   _____                                             _       
 //  / ____|                                           | |      
 // | |     ___  _ __ ___  _ __   ___  _ __   ___ _ __ | |_ ___ 
@@ -203,7 +217,7 @@ private:
 //
 
 
-
+/*
 class InputComponent {
 public:
 
@@ -224,7 +238,7 @@ private:
 	
 
 };
-
+*/
 
 //   _____ _                         
 //  / ____| |                        
@@ -264,6 +278,7 @@ private:
 	std::vector<DropItem>			mDrops;
 
 };
+
 
 //Default constructor.
 World::World() {
@@ -504,13 +519,6 @@ void Player::heal(float hp) {
 	mHP += hp;
 }
 
-//On-screen stats.
-//sf::Text should be used to display stats.
-void Player::showStats(std::ostringstream* hudHealth, std::ostringstream* hudMana) {
-	*hudHealth << mHP;
-	*hudMana << mMP;
-}
-
 sf::FloatRect Player::getRect() {
 	return mRect;
 }
@@ -533,6 +541,14 @@ float Player::getSpeed() {
 
 sf::Vector2f Player::getMovement() {
 	return mMovement;
+}
+
+float Player::getHP() {
+	return mHP;
+}
+
+float Player::getMP() {
+	return mMP;
 }
 
 void Player::setSpeed(float speed) {
@@ -653,7 +669,6 @@ bool Enemy::isReadyToAttack() {
 	else
 		return false;
 }
-
 
 
 
@@ -800,6 +815,12 @@ int main() {
 	textMana.setColor(sf::Color::Blue);
 	textMana.setPosition(10, 45);
 
+	//HUD Enemy count.
+	sf::Text textEnemyCount("", font, 30);
+	textEnemyCount.setStyle(sf::Text::Bold);
+	textEnemyCount.setColor(sf::Color::Green);
+	textEnemyCount.setPosition(10, 80);
+
 	//Enemy sound.
 	sf::SoundBuffer emenyHitSoundBuffer;
 	emenyHitSoundBuffer.loadFromFile("sound1.ogg");
@@ -889,13 +910,13 @@ int main() {
 				drops[i].action(player);
 	
 		//Spawning elves.
-		if((sf::Keyboard::isKeyPressed(sf::Keyboard::G)) && (spawnClock.getElapsedTime().asSeconds() > 0.5)) {
+		if((sf::Keyboard::isKeyPressed(sf::Keyboard::G)) && (spawnClock.getElapsedTime().asSeconds() > 0.25)) {
 			enemies.push_back(*(new Enemy(enemyTexture, 400, 360, font)));
 			spawnClock.restart();
 		}
 
 		//Spawning health potions.
-		if((sf::Keyboard::isKeyPressed(sf::Keyboard::H)) && (spawnClock.getElapsedTime().asSeconds() > 0.5)) {
+		if((sf::Keyboard::isKeyPressed(sf::Keyboard::H)) && (spawnClock.getElapsedTime().asSeconds() > 0.25)) {
 			drops.push_back(*(new DropItem(healthPotionTexture, "healthItem", 40, rand() % 400 + 120, rand() % 600 + 120)));
 			spawnClock.restart();
 		}
@@ -904,11 +925,15 @@ int main() {
 		//HUD display.
 		std::ostringstream hudHealth;
 		std::ostringstream hudMana;
+		std::ostringstream hudEnemyCount;
 
-		player.showStats(&hudHealth, &hudMana);
+		hudHealth << player.getHP();
+		hudMana << player.getMP();
+		hudEnemyCount << enemies.size();
 
 		textMana.setString(hudMana.str());
 		textHealth.setString(hudHealth.str());
+		textEnemyCount.setString(hudEnemyCount.str());
 
 
 		//View.
@@ -921,6 +946,7 @@ int main() {
 
 		textHealth.setPosition(mViewPosition.x, mViewPosition.y);
 		textMana.setPosition(mViewPosition.x, mViewPosition.y + 35);
+		textEnemyCount.setPosition(mViewPosition.x, mViewPosition.y + 70);
 
 		//Clearing the screen.
 		mWindow.clear(sf::Color::White);
@@ -959,6 +985,7 @@ int main() {
 
 		mWindow.draw(textHealth);
 		mWindow.draw(textMana);
+		mWindow.draw(textEnemyCount);
 		mWindow.display();
 
 		//Deleting objects marked for removal.
