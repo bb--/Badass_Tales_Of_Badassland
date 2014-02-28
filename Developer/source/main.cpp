@@ -34,7 +34,7 @@
 //                              |___/|_|   
 //
 
-//Attributes.
+//DataTypes.hpp
 struct attributes {
 
      int							strength;				//Carry weight, melee damage. 
@@ -45,7 +45,6 @@ struct attributes {
 
 };
 
-//Resistances.
 struct resistances {
 
      int							poison;
@@ -57,7 +56,6 @@ struct resistances {
 
 };
 
-//Health bar.
 struct healthBar {
 
 	sf::Sprite						mSprite;
@@ -66,7 +64,6 @@ struct healthBar {
 
 };
 
-//Structure used for storing config values (your C.O.).
 struct config {
 
 	float							invincibilityTime;		
@@ -85,9 +82,19 @@ struct config {
 };
 
 
+//   _____ _                         
+//  / ____| |                        
+// | |    | | __ _ ___ ___  ___  ___ 
+// | |    | |/ _` / __/ __|/ _ \/ __|
+// | |____| | (_| \__ \__ \  __/\__ \
+//  \_____|_|\__,_|___/___/\___||___/
+//         
+
+
 //PROTOTYPES.
 class World;
 
+//Player.hpp
 class Player {
 public:
 
@@ -135,9 +142,7 @@ private:
 	
 };
 
-
-//Work in progress (stupid AI).
-//AI is to be represented as a set of private methods.
+//Enemy.hpp
 class Enemy {
 public:
 
@@ -181,7 +186,7 @@ private:
 
 };
 
-
+//DropItem.hpp
 class DropItem {
 public:
 
@@ -202,6 +207,68 @@ private:
 	float							mCurrentFrame;
 	int								mEffectValue;
 	bool							mIsMarkedForRemoval;
+
+};
+
+//World.hpp
+class World {
+public:
+
+									World();
+									World(int, int);
+	void							resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize);
+	void							loadLevelMap(std::string);
+	void							deleteLevelMap();
+
+	std::vector<Enemy>&				getEnemies();
+	std::vector<DropItem>&			getDrops();
+
+	std::vector<std::vector<int>>	getLevelMap();
+	int								getMapHeight();
+	int								getMapWidth();
+
+private:
+
+	std::vector<std::vector<int>>	mLevelMap;
+	int								mMapHeight;
+	int								mMapWidth;
+
+	//Player							mPlayer;
+	std::vector<Enemy>				mEnemies;
+	std::vector<DropItem>			mDrops;
+
+};
+
+//Game.hpp
+class Game {
+public:
+
+									Game();
+	void							run();
+	void							update(sf::Time);
+	void							processEvents();
+	void							render();
+
+private:
+
+	sf::RenderWindow				mWindow;
+	int								mScreenWidth;					
+	int								mScreenHeight;
+
+	float							mInvincibilityTime;
+	sf::Clock						mGameClock;
+	sf::Clock						mInvincibilityClock;
+	sf::Clock						mSpawnClock;
+	sf::Time						mTimePerFrame;
+
+	std::vector<std::vector<int>>	mLevelMap;
+			
+	int								mTileSize;						
+	int								mGameSpeed;
+	float							mOffsetX;				//Map scrolling
+	float							mOffsetY;				//offset.
+
+	World							mWorld;
 
 };
 
@@ -240,47 +307,19 @@ private:
 };
 */
 
-//   _____ _                         
-//  / ____| |                        
-// | |    | | __ _ ___ ___  ___  ___ 
-// | |    | |/ _` / __/ __|/ _ \/ __|
-// | |____| | (_| \__ \__ \  __/\__ \
-//  \_____|_|\__,_|___/___/\___||___/
+
+//   _____ _                                  _   _               _     
+//  / ____| |                                | | | |             | |    
+// | |    | | __ _ ___ ___     _ __ ___   ___| |_| |__   ___   __| |___ 
+// | |    | |/ _` / __/ __|   | '_ ` _ \ / _ \ __| '_ \ / _ \ / _` / __|
+// | |____| | (_| \__ \__ \   | | | | | |  __/ |_| | | | (_) | (_| \__ \
+//  \_____|_|\__,_|___/___/   |_| |_| |_|\___|\__|_| |_|\___/ \__,_|___/
+//                                                                      
+                                
+
 //
-
-
-
-//World.hpp
-class World {
-public:
-
-									World();
-									World(int, int);
-	void							resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize);
-	void							loadLevelMap(std::string);
-	void							deleteLevelMap();
-
-	std::vector<Enemy>&				getEnemies();
-	std::vector<DropItem>&			getDrops();
-
-	std::vector<std::vector<int>>	getLevelMap();
-	int								getMapHeight();
-	int								getMapWidth();
-
-private:
-
-	std::vector<std::vector<int>>	mLevelMap;
-	int								mMapHeight;
-	int								mMapWidth;
-
-	//Player							mPlayer;
-	std::vector<Enemy>				mEnemies;
-	std::vector<DropItem>			mDrops;
-
-};
-
-
-//Default constructor.
+//World.cpp
+//
 World::World() {
 
 	mMapHeight = 0;
@@ -295,7 +334,6 @@ World::World(int mapHeight, int mapWidth) {
 
 }
 
-//World.cpp
 void World::resolveCollision(sf::FloatRect& rect, sf::Vector2f movement, int direction, int tileSize) {
 
 	for(int i = rect.top / tileSize; i < (rect.top + rect.height) / tileSize; ++i)
@@ -364,63 +402,55 @@ int World::getMapWidth() {
 
 
 
-//Game.hpp
-class Game {
-public:
-
-									Game();
-	void							run();
-	void							update(sf::Time);
-	void							processEvents();
-	void							render();
-
-private:
-
-	sf::RenderWindow				mWindow;
-	int								mScreenWidth;					
-	int								mScreenHeight;
-
-	float							mInvincibilityTime;
-	sf::Clock						mGameClock;
-	sf::Clock						mInvincibilityClock;
-	sf::Clock						mSpawnClock;
-	const static sf::Time			mTimePerFrame;
-
-	std::vector<std::vector<int>>	mLevelMap;
-			
-	int								mTileSize;						
-	int								mGameSpeed;
-	float							mOffsetX;				//Map scrolling
-	float							mOffsetY;				//offset.
-
-	World							mWorld;
-
-};
-/*
+//
+//Game.cpp
+//
 void Game::run() {
 
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
-	
+	mTimePerFrame = sf::seconds(1.f/60.f);
+
 	while(mWindow.isOpen()) {
 
 		sf::Time elapsedTime = mGameClock.restart();
 		timeSinceLastUpdate = elapsedTime;
 		while(timeSinceLastUpdate > mTimePerFrame) {
+
 			timeSinceLastUpdate -= mTimePerFrame;
 
 			processEvents();
 			update(mTimePerFrame);
+
 		}
 
 	}
 
 }
-*/
+
 void Game::processEvents() {
+
+	sf::Event event;
+
+	while(mWindow.pollEvent(event)) {
+
+		switch(event.type) {
+
+			case(sf::Event::Closed)
+				:mWindow.close();
+				break;
+
+		}
+
+	}
 
 }
 
 void Game::update(sf::Time) {
+
+	std::vector<Enemy> enemies = mWorld.getEnemies();
+	std::vector<DropItem> drops = mWorld.getDrops();
+	std::vector<std::vector<int>> levelMap = mWorld.getLevelMap();
+
 
 }
 
@@ -430,8 +460,9 @@ void Game::render() {
 
 
 
-
+//
 //Player.cpp
+//
 Player::Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Font& font) {
 
 	mSprite.setTexture(texture);
@@ -560,7 +591,10 @@ void Player::setMovement(sf::Vector2f movement) {
 }
 
 
+
+//
 //Enemy.cpp
+//
 Enemy::Enemy(sf::Texture& texture, int x, int y, sf::Font& font) {
 	mSprite.setTexture(texture);
 	mRect = sf::FloatRect(x, y, 120, 110);					//Character x, y, width, height.
@@ -672,7 +706,9 @@ bool Enemy::isReadyToAttack() {
 
 
 
+//
 //DropItem.cpp
+//
 DropItem::DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
 	mSprite.setTexture(texture);
 	mRect = sf::FloatRect(x, y, 32, 32);
@@ -705,13 +741,6 @@ bool DropItem::isMarkedForRemoval() {
 
 
 
-//  ______                _   _                 
-// |  ____|              | | (_)                
-// | |__ _   _ _ __   ___| |_ _  ___  _ __  ___ 
-// |  __| | | | '_ \ / __| __| |/ _ \| '_ \/ __|
-// | |  | |_| | | | | (__| |_| | (_) | | | \__ \
-// |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
-//                                             
 
 //   _____           _                    __                  _   _                 
 //  / ____|         | |                  / _|                | | (_)                
@@ -723,7 +752,11 @@ bool DropItem::isMarkedForRemoval() {
 //         |___/  
 //
 
-
+//
+//
+//	SOME STUFF.
+//
+//
 
 //  ______             _               __                  _   _                 
 // |  ____|           (_)             / _|                | | (_)                
@@ -736,18 +769,17 @@ bool DropItem::isMarkedForRemoval() {
 //
 
 
-//Loads a config file.
-void loadConfigFile(struct config* config, std::string filename = "config.txt") {
+void loadConfigFile(config& config, std::string filename = "config.txt") {
 
 	std::ifstream inputFile(filename);
-	inputFile >> config->screenWidth;
-	inputFile >> config->screenHeight;
-	inputFile >> config->tileSize;
-	inputFile >> config->playerStartingX;
-	inputFile >> config->playerStartingY;
-	inputFile >> config->invincibilityTime;
-	inputFile >> config->gameSpeed;
-	inputFile >> config->levelMapName;
+	inputFile >> config.screenWidth;
+	inputFile >> config.screenHeight;
+	inputFile >> config.tileSize;
+	inputFile >> config.playerStartingX;
+	inputFile >> config.playerStartingY;
+	inputFile >> config.invincibilityTime;
+	inputFile >> config.gameSpeed;
+	inputFile >> config.levelMapName;
 	inputFile.close();
 	return;
 
@@ -769,7 +801,7 @@ int main() {
 
 	//Loading config file.
 	config config;
-	loadConfigFile(&config, "config.txt");
+	loadConfigFile(config, "config.txt");
 
 	//Game game;
 	//game.run();
@@ -779,8 +811,6 @@ int main() {
 
 	World world;
 	world.loadLevelMap(levelMapName);
-
-	//Loading level map.
 	std::vector<std::vector<int>> levelMap = world.getLevelMap();
 	
 
@@ -821,53 +851,36 @@ int main() {
 	textEnemyCount.setColor(sf::Color::Green);
 	textEnemyCount.setPosition(10, 80);
 
-	//Enemy sound.
+	//Sounds.
 	sf::SoundBuffer emenyHitSoundBuffer;
+
 	emenyHitSoundBuffer.loadFromFile("sound1.ogg");
+
 	sf::Sound emenyHitSound(emenyHitSoundBuffer);
 
-	//Loading and setting level tileset.
-	//sf::Texture tileSet;
-	//if(!tileSet.loadFromFile("./textures/testTileSet.png"))
-	//	return EXIT_FAILURE;
-	//sf::Sprite tile(tileSet);
-
-	//HP bar.
+	
+	//Loading textures.
 	sf::Texture hpBar;
-	if(!hpBar.loadFromFile("./textures/HPBar.png"))
-		return EXIT_FAILURE;
-
-
-
-	//
-	//UNITS
-	//
-	//
-	//Creating player.
+	sf::Texture tileSet;
 	sf::Texture playerTexture;
-	if(!playerTexture.loadFromFile("./textures/playerSpriteList.png"))
-		return EXIT_FAILURE;
-	Player player(playerTexture, hpBar, config.playerStartingX, config.playerStartingY, font);
-
-	//Enemy texture.
 	sf::Texture enemyTexture;
-	if(!enemyTexture.loadFromFile("./textures/enemySpriteList.png"))
-		return EXIT_FAILURE;
-
-	//Creating test health potion.
 	sf::Texture healthPotionTexture;
-	if(!healthPotionTexture.loadFromFile("./textures/healthPotion.png")) {
-		std::cin.ignore();
-		std::cin.get();
-		return EXIT_FAILURE;
-	}
+
+	if(!hpBar.loadFromFile("./textures/HPBar.png"))							return 1;
+	if(!tileSet.loadFromFile("./textures/testTileSet.png"))					return 1;
+	if(!playerTexture.loadFromFile("./textures/playerSpriteList.png"))		return 1;
+	if(!enemyTexture.loadFromFile("./textures/enemySpriteList.png"))		return 1;
+	if(!healthPotionTexture.loadFromFile("./textures/healthPotion.png"))	return 1;
+
+	sf::Sprite tile(tileSet);
 
 
-	//Object arrays.
-	//std::vector<Enemy> enemies;
+	//Game objects.
 	std::vector<DropItem> drops = world.getDrops();
 	std::vector<Enemy> enemies = world.getEnemies();
-	//enemies.push_back(*(new Enemy(enemyTexture, 400, 360, font)));
+
+	enemies.push_back(*(new Enemy(enemyTexture, 400, 360, font)));
+	Player player(playerTexture, hpBar, config.playerStartingX, config.playerStartingY, font);
 
 
 	//Creating a window.
