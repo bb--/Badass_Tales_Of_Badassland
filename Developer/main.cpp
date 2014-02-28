@@ -279,6 +279,7 @@ private:
 	sf::Clock						mGameClock;
 	sf::Clock						mInvincibilityClock;
 	sf::Clock						mSpawnClock;
+	const static sf::Time			mTimePerFrame;
 
 	std::vector<std::vector<int>>	mLevelMap;
 			
@@ -289,12 +290,38 @@ private:
 
 	World							mWorld;
 
-
 };
+/*
+void Game::run() {
 
+	sf::Time timeSinceLastUpdate = sf::Time::Zero;
+	
+	while(mWindow.isOpen()) {
 
+		sf::Time elapsedTime = mGameClock.restart();
+		timeSinceLastUpdate = elapsedTime;
+		while(timeSinceLastUpdate > mTimePerFrame) {
+			timeSinceLastUpdate -= mTimePerFrame;
 
+			processEvents();
+			update(mTimePerFrame);
+		}
 
+	}
+
+}
+*/
+void Game::processEvents() {
+
+}
+
+void Game::update() {
+
+}
+
+void Game::render() {
+
+}
 
 
 //Player.
@@ -358,7 +385,7 @@ public:
 		if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
 		if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
 
-		mSprite.setPosition(mRect.left - offsetX, mRect.top - offsetY);
+		mSprite.setPosition(mRect.left, mRect.top);
 
 		//HP.
 		if(mHP / mMaxHp >= 0.6)
@@ -369,12 +396,12 @@ public:
 			mHpSprite.setColor(sf::Color::Red);
 
 		mHpSprite.setTextureRect(sf::IntRect(100 * (1 - mHP / mMaxHp), 0, 100, 10));
-		mHpSprite.setPosition(mRect.left - offsetX, mRect.top + mRect.height - offsetY);
-		mTextName.setPosition(mRect.left - offsetX, mRect.top - mTextName.getCharacterSize() - offsetY);						//-
+		mHpSprite.setPosition(mRect.left, mRect.top + mRect.height);
+		mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());						//-
 
 		//Camera scrolling.
-		if(mRect.left > config->screenWidth / 2 - mRect.width / 2)	offsetX = mRect.left - (config->screenWidth / 2 - mRect.width / 2);
-		if(mRect.top > config->screenHeight / 2 - mRect.height / 2)	offsetY = mRect.top - (config->screenHeight / 2 - mRect.height / 2);
+		///if(mRect.left > config->screenWidth / 2 - mRect.width / 2)	offsetX = mRect.left - (config->screenWidth / 2 - mRect.width / 2);
+		//if(mRect.top > config->screenHeight / 2 - mRect.height / 2)	offsetY = mRect.top - (config->screenHeight / 2 - mRect.height / 2);
 
 		//Stopping the player.
 		mMovement.x = 0;
@@ -526,8 +553,8 @@ public:
 		if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
 		if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
 
-		mSprite.setPosition(mRect.left - offsetX, mRect.top - offsetY);
-		mTextName.setPosition(mRect.left - offsetX, mRect.top - mTextName.getCharacterSize() - offsetY);
+		mSprite.setPosition(mRect.left, mRect.top);
+		mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());
 
 	}
 	
@@ -549,11 +576,9 @@ public:
 	}
 
 	void dealDamage(Player& player) {
-
 		float damage = rand() % int(mDamage);
 		player.takeDamage(damage);
 		mDamageClock.restart();
-
 	}
 
 	void detectTargets(World& world) {
@@ -615,7 +640,6 @@ private:
 class DropItem {
 public:
 
-
 	//Drop item constructor.
 	DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
 		mSprite.setTexture(texture);
@@ -628,7 +652,7 @@ public:
 
 	//Drop item update.
 	void update(float time) {
-		mSprite.setPosition(mRect.left - offsetX, mRect.top - offsetY);
+		mSprite.setPosition(mRect.left, mRect.top);
 	}
 
 	void action(Player& player) {
@@ -820,7 +844,10 @@ int main() {
 
 	//Creating a window.
 	sf::RenderWindow mWindow(sf::VideoMode(config.screenWidth, config.screenHeight), "Badass Tales of BADASSLAND!!!!111");
-	//sf::View mView;
+	sf::View mView;
+	mView.reset(sf::FloatRect(0, 0, config.screenWidth, config.screenHeight));
+	mView.setViewport(sf::FloatRect(0, 0, 1, 1));
+	sf::Vector2f mViewPosition;
 
 	//Game cycle.
 	while(mWindow.isOpen()) {
@@ -876,6 +903,18 @@ int main() {
 		textMana.setString(hudMana.str());
 		textHealth.setString(hudHealth.str());
 
+
+		//View.
+		mViewPosition.x = player.getRect().left + config.tileSize / 2 - config.screenWidth / 2;
+		mViewPosition.y = player.getRect().top + config.tileSize / 2 - config.screenHeight / 2;
+		if(mViewPosition.x < 0)	mViewPosition.x = 0;
+		if(mViewPosition.y < 0)	mViewPosition.y = 0;
+		mView.reset(sf::FloatRect(mViewPosition.x, mViewPosition.y, config.screenWidth, config.screenHeight));
+		mWindow.setView(mView);
+
+		textHealth.setPosition(mViewPosition.x, mViewPosition.y);
+		textMana.setPosition(mViewPosition.x, mViewPosition.y + 35);
+
 		//Clearing the screen.
 		mWindow.clear(sf::Color::White);
 
@@ -889,7 +928,7 @@ int main() {
 					default: continue;
 				}
 
-				rectangle.setPosition(config.tileSize * j - offsetX, config.tileSize * i - offsetY);
+				rectangle.setPosition(config.tileSize * j, config.tileSize * i);
 				mWindow.draw(rectangle);
 				//tile.setPosition(tileSize * j - offsetX, tileSize * i - offsetY);
 				//mWindow.draw(tile);
