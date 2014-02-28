@@ -14,24 +14,6 @@
 //FONT - BIG.
 //http://patorjk.com/software/taag/
 
-//Not used anymore (not sure, though).
-/*
-int invincibilityTime = 0;					//2.
-int playerStartingX = 0;					//220.
-int playerStartingY = 0;					//220.
-int tileSize = 0;							//120.
-int screenWidth = 0;						//1280.
-int screenHeight = 0;						//720.
-int gameSpeed = 0;							//200.
-*/
-//Should be moved to config.
-float	offsetX = 0;				//Map scrolling
-float	offsetY = 0;				//offset.
-int		mapHeight = 0;						//0.
-int		mapWidth = 0;						//0.
-
-
-
 
 //  _____        _          _                         
 // |  __ \      | |        | |                        
@@ -95,9 +77,120 @@ struct config {
 
 
 //PROTOTYPES.
-class Player;
-class Enemy;
-class DropItem;
+class World;
+class Player {
+public:
+
+									Player(sf::Texture&, sf::Texture&, int, int, sf::Font&);
+	void							update(float, std::vector<std::vector<int>>, struct config*, World&);
+	void							getMessage(int);
+	void							takeDamage(float);
+	void							heal(float);
+	void							showStats(std::ostringstream*, std::ostringstream*);
+
+	sf::FloatRect					getRect();
+	sf::Sprite						getSprite();
+	sf::Sprite						getHpSprite();
+	sf::Text						getTextName();
+	float							getSpeed();
+	sf::Vector2f					getMovement();
+
+	void							setSpeed(float);
+	void							setMovement(sf::Vector2f);
+
+private:
+
+	//InputComponent					mInput;
+
+	sf::Vector2f					mMovement;
+	float							mSpeed;
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	sf::Sprite						mHpSprite;
+	sf::String						mName;
+	sf::Text						mTextName;
+
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
+
+	bool							mIsAlive;
+	float							mHP;
+	float							mMaxHp;
+	int								mMP;
+
+	std::vector<int>				mMessages;	
+	
+};
+
+//Work in progress (stupid AI).
+//AI is to be represented as a set of private methods.
+class Enemy {
+public:
+
+									Enemy(sf::Texture&, int, int, sf::Font&);
+
+	void							update(float, std::vector<std::vector<int>>, struct config*, World&);
+	void							collision(std::vector<std::vector<int>>, struct config*);
+	void							dealDamage(Player&);
+	void							detectTargets(World&);
+	void							getMessage(int);
+
+	sf::FloatRect					getRect();
+	sf::Sprite						getSprite();
+	sf::Text						getTextName();
+	bool							isReadyToAttack();
+
+private:
+
+	sf::Vector2f					mMovement;
+	int								mDirection;
+	float							mSpeed;
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+
+	float							mCurrentFrame;
+	float							mAnimationSpeed;
+	static const int				mFrameCount = 10;
+
+	bool							mIsAlive;
+	int								mHP;
+
+	sf::Clock						mDamageClock;
+	sf::Clock						mMovementClock;
+	float							mDamage;
+
+	sf::String						mName;
+	sf::Text						mTextName;
+
+	std::vector<int>				mMessages;
+
+};
+
+class DropItem {
+public:
+
+									DropItem(sf::Texture&, std::string, int, int, int);
+	void							update(float);
+	void							action(Player&);
+
+	sf::FloatRect					getRect();
+
+	sf::Sprite						getSprite();
+
+	bool							isMarkedForRemoval();
+
+private:
+
+	sf::FloatRect					mRect;
+	sf::Sprite						mSprite;
+	float							mCurrentFrame;
+	int								mEffectValue;
+	bool							mIsMarkedForRemoval;
+
+};
 
 //   _____                                             _       
 //  / ____|                                           | |      
@@ -265,7 +358,7 @@ public:
 
 									Game();
 	void							run();
-	void							update();
+	void							update(sf::Time);
 	void							processEvents();
 	void							render();
 
@@ -315,7 +408,7 @@ void Game::processEvents() {
 
 }
 
-void Game::update() {
+void Game::update(sf::Time) {
 
 }
 
@@ -324,363 +417,284 @@ void Game::render() {
 }
 
 
-//Player.
-class Player {
-public:
+//Player.cpp
+//Player constructor.
+Player::Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Font& font) {
 
-	//Player constructor.
-	Player(sf::Texture& texture, sf::Texture& hpImage, int x, int y, sf::Font& font) {
-
-		mSprite.setTexture(texture);
-		mRect = sf::FloatRect(x, y, 120, 110);					//Character x, y, width, height.
+	mSprite.setTexture(texture);
+	mRect = sf::FloatRect(x, y, 120, 110);					//Character x, y, width, height.
 		
-		mName = "Player 1";
-		mTextName.setString(mName);
-		mTextName.setFont(font);
-		mTextName.setCharacterSize(30);
-		mTextName.setStyle(sf::Text::Bold);
-		mTextName.setColor(sf::Color::Red);
+	mName = "Player 1";
+	mTextName.setString(mName);
+	mTextName.setFont(font);
+	mTextName.setCharacterSize(30);
+	mTextName.setStyle(sf::Text::Bold);
+	mTextName.setColor(sf::Color::Red);
 		
-		mHpSprite.setTexture(hpImage);
-		mHpSprite.setTextureRect(sf::IntRect(0, 0, 100, 10));
+	mHpSprite.setTexture(hpImage);
+	mHpSprite.setTextureRect(sf::IntRect(0, 0, 100, 10));
 
-		mSprite.setTextureRect(sf::IntRect(0, 15, 120, 110));
+	mSprite.setTextureRect(sf::IntRect(0, 15, 120, 110));
 	
-		mSpeed = 0.1;
-		mMovement.x = 0;
-		mMovement.y = 0;
+	mSpeed = 0.1;
+	mMovement.x = 0;
+	mMovement.y = 0;
 
-		mCurrentFrame = 0;
-		mAnimationSpeed = 0.005;
+	mCurrentFrame = 0;
+	mAnimationSpeed = 0.005;
 
-		mIsAlive = true;
-		mHP = 100;
-		mMaxHp = 100;
-		mMP = 100;
-	}
+	mIsAlive = true;
+	mHP = 100;
+	mMaxHp = 100;
+	mMP = 100;
+}
 
-	//Player update.
-	void update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
+//Player update.
+void Player::update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
 
-		//Player controls (testing).
-		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))	mMovement.y -= mSpeed;
-		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))	mMovement.y += mSpeed;
-		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))	mMovement.x -= mSpeed;
-		if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))	mMovement.x += mSpeed;
-		//mInput.update(*this);
-
-
-		//Movement and resolving colisions (via the World class).
-		mRect.left += mMovement.x * deltaTime;
-		world.resolveCollision(mRect, mMovement, 0, config->tileSize);
-		mRect.top += mMovement.y * deltaTime;
-		world.resolveCollision(mRect, mMovement, 1, config->tileSize);
-
-		//Player animation.
-		mCurrentFrame += mAnimationSpeed * deltaTime;
-		if(mCurrentFrame > mFrameCount) mCurrentFrame -= mFrameCount;
-
-		if(mMovement.x > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 925, mRect.width, mRect.height));
-		if(mMovement.x < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 667, mRect.width, mRect.height));
-		if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
-		if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
-
-		mSprite.setPosition(mRect.left, mRect.top);
-
-		//HP.
-		if(mHP / mMaxHp >= 0.6)
-			mHpSprite.setColor(sf::Color::Green);
-		else if((mHP / mMaxHp >= 0.35) && (mHP / mMaxHp < 0.6))
-			mHpSprite.setColor(sf::Color::Yellow);
-		else if(mHP / mMaxHp < 0.35)
-			mHpSprite.setColor(sf::Color::Red);
-
-		mHpSprite.setTextureRect(sf::IntRect(100 * (1 - mHP / mMaxHp), 0, 100, 10));
-		mHpSprite.setPosition(mRect.left, mRect.top + mRect.height);
-		mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());						//-
-
-		//Camera scrolling.
-		///if(mRect.left > config->screenWidth / 2 - mRect.width / 2)	offsetX = mRect.left - (config->screenWidth / 2 - mRect.width / 2);
-		//if(mRect.top > config->screenHeight / 2 - mRect.height / 2)	offsetY = mRect.top - (config->screenHeight / 2 - mRect.height / 2);
-
-		//Stopping the player.
-		mMovement.x = 0;
-		mMovement.y = 0;
-
-	}
-
-	void getMessage(int message) {
-		mMessages.push_back(message);
-	}
-
-	//Taking damage.
-	void takeDamage(float damage) {
-		mHP -= damage;
-	}
-
-	void heal(float hp) {
-		mHP += hp;
-	}
-
-	//On-screen stats.
-	//sf::Text should be used to display stats.
-	void showStats(std::ostringstream* hudHealth, std::ostringstream* hudMana) {
-
-		*hudHealth << mHP;
-		*hudMana << mMP;
-
-	}
-
-	//Getters.
-	sf::FloatRect getRect() {
-		return mRect;
-	}
-
-	sf::Sprite getSprite() {
-		return mSprite;
-	}
-
-	sf::Sprite getHpSprite() {
-		return mHpSprite;
-	}
-
-	sf::Text getTextName() {
-		return mTextName;
-	}
-
-	float getSpeed() {
-		return mSpeed;
-	}
-
-	sf::Vector2f getMovement() {
-		return mMovement;
-	}
-
-	//Setters.
-	void setSpeed(float speed) {
-		mSpeed = speed;
-	}
-
-	void setMovement(sf::Vector2f movement) {
-		mMovement = movement;
-	}
-
-private:
-
-	//InputComponent					mInput;
-
-	sf::Vector2f					mMovement;
-	float							mSpeed;
-
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-	sf::Sprite						mHpSprite;
-	sf::String						mName;
-	sf::Text						mTextName;
-
-	float							mCurrentFrame;
-	float							mAnimationSpeed;
-	static const int				mFrameCount = 10;
-
-	bool							mIsAlive;
-	float							mHP;
-	float							mMaxHp;
-	int								mMP;
-
-	std::vector<int>				mMessages;
-
-};
+	//Player controls (testing).
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))	mMovement.y -= mSpeed;
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))	mMovement.y += mSpeed;
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))	mMovement.x -= mSpeed;
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))	mMovement.x += mSpeed;
+	//mInput.update(*this);
 
 
-//Work in progress (stupid AI).
-//AI is to be represented as a set of private methods.
-class Enemy {
-public:
+	//Movement and resolving colisions (via the World class).
+	mRect.left += mMovement.x * deltaTime;
+	world.resolveCollision(mRect, mMovement, 0, config->tileSize);
+	mRect.top += mMovement.y * deltaTime;
+	world.resolveCollision(mRect, mMovement, 1, config->tileSize);
+
+	//Player animation.
+	mCurrentFrame += mAnimationSpeed * deltaTime;
+	if(mCurrentFrame > mFrameCount) mCurrentFrame -= mFrameCount;
+
+	if(mMovement.x > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 925, mRect.width, mRect.height));
+	if(mMovement.x < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 667, mRect.width, mRect.height));
+	if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
+	if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
+
+	mSprite.setPosition(mRect.left, mRect.top);
+
+	//HP.
+	if(mHP / mMaxHp >= 0.6)
+		mHpSprite.setColor(sf::Color::Green);
+	else if((mHP / mMaxHp >= 0.35) && (mHP / mMaxHp < 0.6))
+		mHpSprite.setColor(sf::Color::Yellow);
+	else if(mHP / mMaxHp < 0.35)
+		mHpSprite.setColor(sf::Color::Red);
+
+	mHpSprite.setTextureRect(sf::IntRect(100 * (1 - mHP / mMaxHp), 0, 100, 10));
+	mHpSprite.setPosition(mRect.left, mRect.top + mRect.height);
+	mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());						//-
+
+	//Stopping the player.
+	mMovement.x = 0;
+	mMovement.y = 0;
+
+}
+
+void Player::getMessage(int message) {
+	mMessages.push_back(message);
+}
+
+//Taking damage.
+void Player::takeDamage(float damage) {
+	mHP -= damage;
+}
+
+void Player::heal(float hp) {
+	mHP += hp;
+}
+
+//On-screen stats.
+//sf::Text should be used to display stats.
+void Player::showStats(std::ostringstream* hudHealth, std::ostringstream* hudMana) {
+	*hudHealth << mHP;
+	*hudMana << mMP;
+}
+
+//Getters.
+sf::FloatRect Player::getRect() {
+	return mRect;
+}
+
+sf::Sprite Player::getSprite() {
+	return mSprite;
+}
+
+sf::Sprite Player::getHpSprite() {
+	return mHpSprite;
+}
+
+sf::Text Player::getTextName() {
+	return mTextName;
+}
+
+float Player::getSpeed() {
+	return mSpeed;
+}
+
+sf::Vector2f Player::getMovement() {
+	return mMovement;
+}
+
+//Setters.
+void Player::setSpeed(float speed) {
+	mSpeed = speed;
+}
+
+void Player::setMovement(sf::Vector2f movement) {
+	mMovement = movement;
+}
 
 
-	//Enemy constructor.
-	Enemy(sf::Texture& texture, int x, int y, sf::Font& font) {
-		mSprite.setTexture(texture);
-		mRect = sf::FloatRect(x, y, 120, 110);					//Character x, y, width, height.
+//Enemy.cpp
+//Enemy constructor.
+Enemy::Enemy(sf::Texture& texture, int x, int y, sf::Font& font) {
+	mSprite.setTexture(texture);
+	mRect = sf::FloatRect(x, y, 120, 110);					//Character x, y, width, height.
 
-		mName = "Enemy";
-		mTextName.setString(mName);
-		mTextName.setFont(font);
-		mTextName.setCharacterSize(30);
-		mTextName.setStyle(sf::Text::Bold);
-		mTextName.setColor(sf::Color::Magenta);
+	mName = "Enemy";
+	mTextName.setString(mName);
+	mTextName.setFont(font);
+	mTextName.setCharacterSize(30);
+	mTextName.setStyle(sf::Text::Bold);
+	mTextName.setColor(sf::Color::Magenta);
 
-		mSprite.setTextureRect(sf::IntRect(0, 15, 120, 110));
+	mSprite.setTextureRect(sf::IntRect(0, 15, 120, 110));
 
+	mDirection = rand() % 4;
+	mSpeed = 0.05;
+
+	mCurrentFrame = 0;
+	mAnimationSpeed = mSpeed * 0.05;
+
+	mIsAlive = true;
+	mHP = 100;
+
+	mDamage = 30;
+}
+
+//Enemy update.
+void Enemy::update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
+
+	if(mMovementClock.getElapsedTime().asSeconds() > 5) {
 		mDirection = rand() % 4;
-		mSpeed = 0.05;
-
-		mCurrentFrame = 0;
-		mAnimationSpeed = mSpeed * 0.05;
-
-		mIsAlive = true;
-		mHP = 100;
-
-		mDamage = 30;
+		mMovementClock.restart();
 	}
 
-	//Enemy update.
-	void update(float deltaTime, std::vector<std::vector<int>> levelMap, struct config* config, World& world) {
+	if(mDirection == 0) {mMovement.x = 0;		mMovement.y = -mSpeed;}
+	if(mDirection == 1) {mMovement.x = mSpeed;	mMovement.y = 0;}
+	if(mDirection == 2) {mMovement.x = 0;		mMovement.y = mSpeed;}
+	if(mDirection == 3) {mMovement.x = -mSpeed;	mMovement.y = 0;}
 
-		if(mMovementClock.getElapsedTime().asSeconds() > 5) {
-			mDirection = rand() % 4;
-			mMovementClock.restart();
-		}
+	mRect.left += mMovement.x * deltaTime;
+	collision(levelMap, config);
+	//world.resolveCollision(mRect, mMovement, 0, config->tileSize);
+	mRect.top += mMovement.y * deltaTime;
+	collision(levelMap, config);
+	//world.resolveCollision(mRect, mMovement, 1, config->tileSize);
 
-		if(mDirection == 0) {mMovement.x = 0;		mMovement.y = -mSpeed;}
-		if(mDirection == 1) {mMovement.x = mSpeed;	mMovement.y = 0;}
-		if(mDirection == 2) {mMovement.x = 0;		mMovement.y = mSpeed;}
-		if(mDirection == 3) {mMovement.x = mSpeed;	mMovement.y = 0;}
+	//Enemy animation.
+	mCurrentFrame += mAnimationSpeed * deltaTime;
+	if(mCurrentFrame > mFrameCount) mCurrentFrame -= mFrameCount;
 
-		mRect.left += mMovement.x * deltaTime;
-		collision(levelMap, config);
-		//world.resolveCollision(mRect, mMovement, 0, config->tileSize);
-		mRect.top += mMovement.y * deltaTime;
-		collision(levelMap, config);
-		//world.resolveCollision(mRect, mMovement, 1, config->tileSize);
+	if(mMovement.x > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 925, mRect.width, mRect.height));
+	if(mMovement.x < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 667, mRect.width, mRect.height));
+	if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
+	if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
 
-		//Enemy animation.
-		mCurrentFrame += mAnimationSpeed * deltaTime;
-		if(mCurrentFrame > mFrameCount) mCurrentFrame -= mFrameCount;
+	mSprite.setPosition(mRect.left, mRect.top);
+	mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());
 
-		if(mMovement.x > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 925, mRect.width, mRect.height));
-		if(mMovement.x < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 667, mRect.width, mRect.height));
-		if(mMovement.y > 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 535, mRect.width, mRect.height));
-		if(mMovement.y < 0) mSprite.setTextureRect(sf::IntRect(mRect.width * int(mCurrentFrame), 787, mRect.width, mRect.height));
-
-		mSprite.setPosition(mRect.left, mRect.top);
-		mTextName.setPosition(mRect.left, mRect.top - mTextName.getCharacterSize());
-
-	}
+}
 	
-	void collision(std::vector<std::vector<int>> levelMap, struct config* config) {
-		for(int i = mRect.top / config->tileSize; i < (mRect.top + mRect.height) / config->tileSize; ++i)
-			for(int j = mRect.left / config->tileSize; j < (mRect.left + mRect.width) / config->tileSize; ++j) {
+void Enemy::collision(std::vector<std::vector<int>> levelMap, struct config* config) {
+	for(int i = mRect.top / config->tileSize; i < (mRect.top + mRect.height) / config->tileSize; ++i)
+		for(int j = mRect.left / config->tileSize; j < (mRect.left + mRect.width) / config->tileSize; ++j) {
 				
-				if(levelMap[i][j] == 'B') {
-					if(mMovement.x > 0) mRect.left = j * config->tileSize - mRect.width;
-					if(mMovement.x < 0) mRect.left = j * config->tileSize + config->tileSize;
-					if(mMovement.y > 0) mRect.top = i * config->tileSize - mRect.height;
-					if(mMovement.y < 0) mRect.top = i * config->tileSize + config->tileSize;
-					int temp = rand() % 4;
-					if(temp != mDirection) mDirection = temp;
-					//direction = rand() % 4;		//???
-				}
-						
+			if(levelMap[i][j] == 'B') {
+				if(mMovement.x > 0) mRect.left = j * config->tileSize - mRect.width;
+				if(mMovement.x < 0) mRect.left = j * config->tileSize + config->tileSize;
+				if(mMovement.y > 0) mRect.top = i * config->tileSize - mRect.height;
+				if(mMovement.y < 0) mRect.top = i * config->tileSize + config->tileSize;
+				int temp = rand() % 4;
+				if(temp != mDirection) mDirection = temp;
+				//direction = rand() % 4;		//???
 			}
-	}
+						
+		}
+}
 
-	void dealDamage(Player& player) {
-		float damage = rand() % int(mDamage);
-		player.takeDamage(damage);
-		mDamageClock.restart();
-	}
+void Enemy::dealDamage(Player& player) {
+	float damage = rand() % int(mDamage);
+	player.takeDamage(damage);
+	mDamageClock.restart();
+}
 
-	void detectTargets(World& world) {
-		
-	}
+void detectTargets(World& world) {
 	
-	//Inner communication between objects (between the components in the future).
-	void getMessage(int message) {
-		mMessages.push_back(message);
-	}
-
-	sf::FloatRect getRect() {
-		return mRect;
-	}
-
-	sf::Sprite getSprite() {
-		return mSprite;
-	}
-
-	sf::Text getTextName() {
-		return mTextName;
-	}
-
-	bool isReadyToAttack() {
-		if(mDamageClock.getElapsedTime().asSeconds() > mSpeed * 10)
-			return true;
-		else
-			return false;
-	}
-
-private:
-
-	sf::Vector2f					mMovement;
-	int								mDirection;
-	float							mSpeed;
-
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-
-	float							mCurrentFrame;
-	float							mAnimationSpeed;
-	static const int				mFrameCount = 10;
-
-	bool							mIsAlive;
-	int								mHP;
-
-	sf::Clock						mDamageClock;
-	sf::Clock						mMovementClock;
-	float							mDamage;
-
-	sf::String						mName;
-	sf::Text						mTextName;
-
-	std::vector<int>				mMessages;
-
+}
 	
-};
+//Inner communication between objects (between the components in the future).
+void Enemy::getMessage(int message) {
+	mMessages.push_back(message);
+}
 
-class DropItem {
-public:
+sf::FloatRect Enemy::getRect() {
+	return mRect;
+}
 
-	//Drop item constructor.
-	DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
-		mSprite.setTexture(texture);
-		mRect = sf::FloatRect(x, y, 32, 32);
-		mSprite.setTextureRect(sf::IntRect(0, 0, 32, 32));
-		mCurrentFrame = 0;
-		mEffectValue = effect;
-		mIsMarkedForRemoval = false;
-	}
+sf::Sprite Enemy::getSprite() {
+	return mSprite;
+}
 
-	//Drop item update.
-	void update(float time) {
-		mSprite.setPosition(mRect.left, mRect.top);
-	}
+sf::Text Enemy::getTextName() {
+	return mTextName;
+}
 
-	void action(Player& player) {
-		player.heal(mEffectValue);
-		mIsMarkedForRemoval = true;
-	}
+bool Enemy::isReadyToAttack() {
+	if(mDamageClock.getElapsedTime().asSeconds() > mSpeed * 10)
+		return true;
+	else
+		return false;
+}
 
-	sf::FloatRect getRect() {
-		return mRect;
-	}
+//DropItem.cpp
+//Drop item constructor.
+DropItem::DropItem(sf::Texture& texture, std::string type, int effect, int x, int y) {
+	mSprite.setTexture(texture);
+	mRect = sf::FloatRect(x, y, 32, 32);
+	mSprite.setTextureRect(sf::IntRect(0, 0, 32, 32));
+	mCurrentFrame = 0;
+	mEffectValue = effect;
+	mIsMarkedForRemoval = false;
+}
 
-	sf::Sprite getSprite() {
-		return mSprite;
-	}
+//Drop item update.
+void DropItem::update(float time) {
+	mSprite.setPosition(mRect.left, mRect.top);
+}
 
-	bool isMarkedForRemoval() {
-		return mIsMarkedForRemoval;
-	}
+void DropItem::action(Player& player) {
+	player.heal(mEffectValue);
+	mIsMarkedForRemoval = true;
+}
 
-private:
+sf::FloatRect DropItem::getRect() {
+	return mRect;
+}
 
-	sf::FloatRect					mRect;
-	sf::Sprite						mSprite;
-	float							mCurrentFrame;
-	int								mEffectValue;
-	bool							mIsMarkedForRemoval;
+sf::Sprite DropItem::getSprite() {
+	return mSprite;
+}
 
-};
+bool DropItem::isMarkedForRemoval() {
+	return mIsMarkedForRemoval;
+}
+
 
 
 //  ______                _   _                 
@@ -715,7 +729,7 @@ private:
 
 
 //Loads a config file.
-void loadConfigFile(std::string filename, struct config* config) {
+void loadConfigFile(struct config* config, std::string filename = "config.txt") {
 
 	std::ifstream inputFile(filename);
 	inputFile >> config->screenWidth;
@@ -747,7 +761,7 @@ int main() {
 
 	//Loading config file.
 	config config;
-	loadConfigFile("config.txt", &config);
+	loadConfigFile(&config, "config.txt");
 
 	//Game game;
 	//game.run();
